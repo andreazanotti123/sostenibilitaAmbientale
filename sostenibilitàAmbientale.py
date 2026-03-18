@@ -1,160 +1,175 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-import json
-import os
+import streamlit as st              # importa streamlit per creare l'interfaccia web
+import pandas as pd                # importa pandas per gestire tabelle (DataFrame)
+import matplotlib.pyplot as plt    # importa matplotlib per creare grafici
+import json                        # serve per leggere file JSON
+import os                          # serve per gestire percorsi dei file
 
+st.set_page_config(page_title="Milano Air Dashboard", layout="wide")  # imposta titolo pagina e layout largo
 
-st.set_page_config(page_title="Milano Air Dashboard", layout="wide", initial_sidebar_state="expanded")
+st.title("Monitoraggio atmosferico Milano")  # titolo principale mostrato nella pagina
 
-
-st.markdown("""
-    <style>
-    .main { background-color: #0e1117; }
-    .stTitle { color: #00ffc8; font-family: 'Courier New', monospace; text-align: center; border-bottom: 2px solid #00ffc8; }
-    h3 { color: #00d4ff !important; }
-    </style>
-    """, unsafe_allow_html=True)
-
-st.title(" MONITORAGGIO ATMOSFERICO: MILANO")
-
-
-with st.sidebar:
+with st.sidebar:                  # crea barra laterale                 # crea barra laterale
     st.header("Glossario Inquinanti")
-    info_dict = {
-        "Biossido di Azoto (NO2)": "Generato dai motori termici. Infiamma le vie aeree e favorisce lo smog.",
-        "Ozono (O3)": "Gas instabile e reattivo. Irrita i polmoni e danneggia la vegetazione urbana.",
-        "Biossido di Zolfo (SO2)": "Deriva da combustibili fossili pesanti. Causa piogge acide e irritazioni bronchiali."
-    }
-    for gas, desc in info_dict.items():
-        with st.expander(gas):
-            st.caption(desc)
+    with st.expander("Biossido di Azoto (NO₂)"):
+        st.write("Gas prodotto principalmente dai motori a combustione (auto, camion).")
+        st.write("È uno dei principali responsabili dello smog urbano.")
+        st.write("Effetti: irrita le vie respiratorie e peggiora asma e bronchiti.")
 
+    with st.expander("Monossido di Azoto (NO)"):
+        st.write("Gas emesso direttamente dai motori e dagli impianti industriali.")
+        st.write("Si trasforma facilmente in NO₂ nell'atmosfera.")
+        st.write("Effetti: contribuisce alla formazione di altri inquinanti.")
 
-base_path = os.path.dirname(_file_)
+    with st.expander("Ozono (O₃)"):
+        st.write("Gas che si forma con la luce solare a partire da altri inquinanti.")
+        st.write("È un inquinante secondario (non emesso direttamente).")
+        st.write("Effetti: irrita occhi e polmoni, dannoso per piante e colture.")
 
-@st.cache_data
-def load_environmental_data():
-    
-    file_stazioni = os.path.join(base_path, "qaria_stazione.geojson")
-    with open(file_stazioni, "r", encoding="utf8") as f:
-        geo_data = json.load(f)
-    
-    stazioni_list = []
-    for feat in geo_data["features"]:
-        stazioni_list.append({
-            "id": str(feat["properties"]["id_amat"]),
-            "nome": feat["properties"]["nome"],
-            "coords": feat["geometry"]["coordinates"]
+    with st.expander("Biossido di Zolfo (SO₂)"):
+        st.write("Deriva dalla combustione di carbone e petrolio.")
+        st.write("Tipico delle industrie e centrali energetiche.")
+        st.write("Effetti: causa irritazioni respiratorie e piogge acide.")
+
+    with st.expander("Monossido di Carbonio (CO)"):
+        st.write("Gas prodotto da combustioni incomplete (motori, stufe).")
+        st.write("È incolore e inodore, quindi molto pericoloso.")
+        st.write("Effetti: riduce il trasporto di ossigeno nel sangue.")
+
+    with st.expander("Anidride Carbonica (CO₂)"):
+        st.write("Gas prodotto dalla combustione di carburanti fossili e respirazione.")
+        st.write("Non è tossico a basse concentrazioni.")
+        st.write("Effetti: principale responsabile dell'effetto serra e cambiamento climatico.")
+
+    with st.expander("Particolato fine (PM10)"):
+        st.write("Particelle solide o liquide sospese nell'aria con diametro < 10 µm.")
+        st.write("Provengono da traffico, industrie e polveri.")
+        st.write("Effetti: entrano nei polmoni causando problemi respiratori.")
+
+    with st.expander("Particolato ultrafine (PM2.5)"):
+        st.write("Particelle ancora più piccole (< 2.5 µm).")
+        st.write("Più pericolose perché penetrano in profondità nei polmoni.")
+        st.write("Effetti: malattie respiratorie e cardiovascolari.")
+
+    with st.expander("Benzene (C₆H₆)"):
+        st.write("Composto organico volatile presente nei carburanti.")
+        st.write("Deriva soprattutto dal traffico.")
+        st.write("Effetti: sostanza cancerogena.")
+
+    with st.expander("Ammoniaca (NH₃)"):
+        st.write("Gas prodotto soprattutto da attività agricole e allevamenti.")
+        st.write("Contribuisce alla formazione del particolato.")
+        st.write("Effetti: irritazione occhi e vie respiratorie.")
+
+    with st.expander("Solfati (SO₄²⁻)"):
+        st.write("Derivano dalla trasformazione del biossido di zolfo.")
+        st.write("Sono componenti del particolato atmosferico.")
+        st.write("Effetti: contribuiscono allo smog e alle piogge acide.")
+
+    with st.expander("Nitrati (NO₃⁻)"):
+        st.write("Derivano dagli ossidi di azoto (NOx).")
+        st.write("Sono parte del particolato fine.")
+        st.write("Effetti: contribuiscono all'inquinamento atmosferico e allo smog.")    # testo semplice
+            
+def carica_dati():              # funzione per caricare i dati
+    base = os.path.dirname(__file__)   # prende la cartella dove si trova il file .python
+
+    # apertura file geojson
+    with open(os.path.join(base, "qaria_stazione.geojson"), "r", encoding="utf8") as f:  
+        geo = json.load(f)      # carica il contenuto JSON in un dizionario Python
+
+    stazioni = []               # lista vuota dove salvare le stazioni
+    for f in geo["features"]:   # ciclo for su tutte le stazioni nel file
+        stazioni.append({       # aggiunge un dizionario alla lista
+            "id": str(f["properties"]["id_amat"]),   # prende id e lo converte in stringa
+            "nome": f["properties"]["nome"]          # prende il nome della stazione
         })
-    
-    
-    records = []
-    for yr in range(2016, 2026):
-        path = os.path.join(base_path, f"{yr}_stazioni.json")
-        if os.path.exists(path):
+
+    dati = []                  # lista per tutti i dati
+    for anno in range(2016, 2026):   # ciclo sugli anni dal 2016 al 2025
+        path = os.path.join(base, f"{anno}_stazioni.json")  # crea il percorso del file
+        if os.path.exists(path):     # controlla se il file esiste
             with open(path, "r", encoding="utf8") as f:
-                records.extend(json.load(f))
-    
-    df = pd.DataFrame(records)
-    df['data'] = pd.to_datetime(df['data'])
-    df['valore'] = pd.to_numeric(df['valore'], errors='coerce')
-    df['stazione_id'] = df['stazione_id'].astype(str)
-    return df, pd.DataFrame(stazioni_list)
+                dati += json.load(f)   # aggiunge i dati alla lista (+= concatena liste)
 
-df_main, df_geo = load_environmental_data()
+    df = pd.DataFrame(dati)    # crea DataFrame (tabella) dai dati
 
+    df["data"] = pd.to_datetime(df["data"])   # converte colonna in formato data
+    df["valore"] = pd.to_numeric(df["valore"], errors="coerce")  # converte numeri (errori → NaN)
+    df["stazione_id"] = df["stazione_id"].astype(str)  # converte ID in stringa
 
-st.subheader(" Analisi Quantitativa del Database")
-if not df_main.empty:
-    fig1, ax1 = plt.subplots(figsize=(12, 4))
-    
-    plt.style.use('dark_background')
-    
-    count_data = df_main['data'].dt.year.value_counts().sort_index()
-    count_data.plot(kind='bar', color='#00ffc8', ax=ax1, edgecolor='white')
-    
-    ax1.set_title("Volume campionamenti per anno", pad=20)
-    ax1.set_ylabel("N. Record")
-    st.pyplot(fig1)
+    return df, pd.DataFrame(stazioni)   # restituisce dati e stazioni come DataFrame
 
-st.divider()
+df, stazioni = carica_dati()   # chiama la funzione e salva i risultati
 
+# ---------------- ANALISI 1 ----------------
+st.subheader("Dati per anno")   # sottotitolo
 
-col_ctrl1, col_ctrl2 = st.columns([1, 2])
-with col_ctrl1:
-    target_year = st.select_slider("Seleziona Periodo", options=list(range(2016, 2026)), value=2025)
-with col_ctrl2:
-    target_gas = st.selectbox("Inquinante target", df_main['inquinante'].unique())
+conteggio = df["data"].dt.year.value_counts().sort_index()  
+# prende l'anno (.dt.year), conta quante righe per anno (value_counts), ordina (sort_index)
 
-st.subheader(f" Trend Mensile: {target_gas} ({target_year})")
+fig, ax = plt.subplots()       # crea figura e assi del grafico
+conteggio.plot(kind="bar", ax=ax)   # grafico a barre
+ax.set_ylabel("Numero rilevazioni") # etichetta asse Y
 
-df_filtered = df_main[(df_main['data'].dt.year == target_year) & (df_main['inquinante'] == target_gas)]
-monthly_avg = df_filtered.groupby(df_filtered['data'].dt.month)['valore'].mean()
+st.pyplot(fig)                 # mostra il grafico in streamlit
 
-if not monthly_avg.empty:
-    fig2, ax2 = plt.subplots(figsize=(10, 4))
-    ax2.fill_between(monthly_avg.index, monthly_avg.values, color='#00d4ff', alpha=0.3)
-    ax2.plot(monthly_avg.index, monthly_avg.values, marker='h', ls='--', lw=2, color='#00d4ff')
-    
-    ax2.set_xticks(range(1, 13))
-    ax2.set_xticklabels(['G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S', 'O', 'N', 'D'])
-    ax2.grid(axis='y', alpha=0.2)
-    st.pyplot(fig2)
-else:
-    st.warning("Dati non pervenuti per questa selezione.")
+# ---------------- ANALISI 2 ----------------
+st.subheader("Trend mensile")   # sottotitolo
 
-st.divider()
+anno = st.slider("Anno", 2016, 2025, 2025)   # slider per scegliere anno
+gas = st.selectbox("Gas", df["inquinante"].unique())  
+# selectbox = menu a tendina, unique() prende valori unici
 
+filtro = df[(df["data"].dt.year == anno) & (df["inquinante"] == gas)]  
+# filtra dati: anno scelto AND gas scelto
 
-st.subheader(" Classifica Criticità per Stazione (Media 2016-2025)")
+media_mensile = filtro.groupby(filtro["data"].dt.month)["valore"].mean()  
+# groupby = raggruppa per mese, mean = media
 
+fig2, ax2 = plt.subplots()    # crea grafico
+media_mensile.plot(ax=ax2, marker="o")  # linea con punti
+ax2.set_xlabel("Mese")        # etichetta asse X
+ax2.set_ylabel("Valore medio")# etichetta asse Y
 
-df_merged = pd.merge(df_main, df_geo, left_on='stazione_id', right_on='id')
+st.pyplot(fig2)               # mostra grafico
 
-gas_rank = st.radio("Scegli parametro di confronto:", df_merged['inquinante'].unique(), horizontal=True)
+# ---------------- ANALISI 3 ----------------
+st.subheader("Classifica stazioni")  # sottotitolo
 
-ranking = df_merged[df_merged['inquinante'] == gas_rank].groupby('nome')['valore'].mean().sort_values()
+df_merge = pd.merge(df, stazioni, left_on="stazione_id", right_on="id")  
+# merge = unisce due tabelle usando colonne in comune
 
-c1, c2 = st.columns([2, 1])
-with c1:
-    fig3, ax3 = plt.subplots(figsize=(10, 6))
-    colors = plt.cm.viridis(np.linspace(0, 1, len(ranking)))
-    ranking.plot(kind='barh', color=colors, ax=ax3)
-    ax3.set_xlabel("µg/m³ (Media Storica)")
-    st.pyplot(fig3)
-with c2:
-    st.dataframe(ranking.rename("Media").to_frame(), use_container_width=True)
+gas_scelto = st.selectbox("Scegli gas", df_merge["inquinante"].unique())  
 
-st.divider()
+ranking = df_merge[df_merge["inquinante"] == gas_scelto] \
+            .groupby("nome")["valore"].mean() \
+            .sort_values()  
+# filtra gas → raggruppa per stazione → fa media → ordina
 
+fig3, ax3 = plt.subplots()   # crea grafico
+ranking.plot(kind="barh", ax=ax3)   # grafico orizzontale
 
-latest_yr = int(df_main['data'].dt.year.max())
-st.subheader(f" Deep Dive {latest_yr}: Focus Località")
+st.pyplot(fig3)              # mostra grafico
 
-localita = st.selectbox("Seleziona Punto di Rilevazione:", sorted(df_merged['nome'].unique()))
-gas_localita = st.segmented_control("Vettore:", sorted(df_merged[df_merged['nome'] == localita]['inquinante'].unique()))
+# ---------------- ANALISI 4 ----------------
+st.subheader("Dettaglio stazione")  # sottotitolo
 
-if gas_localita:
-    data_focus = df_merged[(df_merged['nome'] == localita) & 
-                           (df_merged['inquinante'] == gas_localita) & 
-                           (df_merged['data'].dt.year == latest_yr)]
-    
-    res_mensile = data_focus.groupby(data_focus['data'].dt.month)['valore'].mean()
-    
-    if not res_mensile.empty:
-        fig4, ax4 = plt.subplots(figsize=(12, 4))
-        sns.barplot(x=res_mensile.index, y=res_mensile.values, palette="flare", ax=ax4)
-        
-        
-        max_val = res_mensile.max()
-        max_idx = res_mensile.idxmax()
-        ax4.annotate(f'PICCO: {max_val:.2f}', xy=(max_idx-1, max_val), xytext=(max_idx-1, max_val+5),
-                     arrowprops=dict(facecolor='white', shrink=0.05))
-        
-        ax4.set_title(f"Profilo annuale {gas_localita} - Stazione {localita}")
-        st.pyplot(fig4)
+stazione = st.selectbox("Seleziona stazione", df_merge["nome"].unique())  
+# scelta stazione
 
-st.caption("Dati estratti dal dataset AMAT Milano. Elaborazione automatica.")
+df_staz = df_merge[df_merge["nome"] == stazione]  
+# filtro per stazione
+
+gas_staz = st.selectbox("Gas", df_staz["inquinante"].unique())  
+# scelta gas
+
+df_finale = df_staz[df_staz["inquinante"] == gas_staz]  
+# filtro finale
+
+media = df_finale.groupby(df_finale["data"].dt.month)["valore"].mean()  
+# media mensile
+
+fig4, ax4 = plt.subplots()   # crea grafico
+media.plot(kind="bar", ax=ax4)  # grafico a barre
+
+st.pyplot(fig4)              # mostra grafico
